@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "netscope.serviceAccountName" . }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "netscope.serviceAccountName" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "netscope.serviceAccountName" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "netscope.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}

@@ -1,0 +1,35 @@
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      target: builder
+    command:
+      - go
+      - run
+      - cmd/agent/main.go
+      - --node-name=node1
+      - --server-endpoint=server:8080
+      - --collection-interval=10s
+      - -v=10
+    environment:
+      - NODE_NAME=node1
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - .:/build
+      - /Users/ergjanjaha/.kube/config:/kube/config
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+      target: builder
+    network_mode: host
+    command: go run cmd/server/main.go
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+    volumes:
+      - .:/build

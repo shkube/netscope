@@ -1,0 +1,32 @@
+# Binaries
+./netscope-agent
+./netscope-server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+*.out
+
+# Go workspace file
+go.work
+
+# eBPF generated files
+agent/*_bpfeb.go
+agent/*_bpfel.go
+agent/*_bpfeb.o
+agent/*_bpfel.o
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+bin/
+dist/

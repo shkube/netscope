@@ -1,0 +1,42 @@
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache \
+    make \
+    gcc \
+    musl-dev \
+    git
+
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build server binary
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o netscope-server ./cmd/server
+
+# Final stage
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /build/netscope-server .
+
+# Create non-root user
+RUN addgroup -g 1000 netscope && \
+    adduser -D -u 1000 -G netscope netscope
+
+USER netscope
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/netscope-server"]

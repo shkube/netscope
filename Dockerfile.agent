@@ -1,0 +1,47 @@
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache \
+    clang \
+    llvm \
+    make \
+    gcc \
+    musl-dev \
+    linux-headers \
+    git
+
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Install bpf2go tool
+RUN go install github.com/cilium/ebpf/cmd/bpf2go@latest
+
+# Copy source code
+COPY . .
+
+# Generate eBPF bindings
+RUN go mod download github.com/cilium/ebpf && go mod tidy
+RUN cd agent && go generate
+
+# Build agent binary
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o netscope-agent ./cmd/agent
+
+# Final stage
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /build/netscope-agent .
+
+# Run as non-root user (note: agent needs root for eBPF, but this is handled by Kubernetes securityContext)
+USER root
+
+ENTRYPOINT ["/app/netscope-agent"]

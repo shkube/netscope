@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build artifacts
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# eBPF generated files (will be regenerated in build)
+agent/*_bpfeb.o
+agent/*_bpfel.o
+
+# Documentation
+*.md
+!README.md
+
+# CI/CD
+.github
+
+# Other
+.DS_Store
