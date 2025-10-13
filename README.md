@@ -121,21 +121,30 @@ The agent automatically detects kernel capabilities and uses TCX when available,
 
 ## Installation
 
+### Prerequisites
+
+- Kubernetes cluster (1.24+)
+- Helm 3.x installed
+- kubectl configured to access your cluster
+
 ### Quick Start
 
-1. **Clone and build:**
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/yourusername/netscope.git
    cd netscope
-
-   # Build everything (binaries and images)
-   make all
-   make docker
    ```
 
-2. **Deploy to cluster:**
+2. **Deploy using Helm:**
    ```bash
-   kubectl apply -f deploy/netscope.yaml
+   # Install the netscope agent (DaemonSet)
+   helm install netscope-agent deploy/charts/netscope \
+     --namespace netscope \
+     --create-namespace
+
+   # Install the netscope server
+   helm install netscope-server deploy/charts/netscope-server \
+     --namespace netscope
    ```
 
 3. **Verify deployment:**
@@ -150,18 +159,67 @@ The agent automatically detects kernel capabilities and uses TCX when available,
    kubectl logs -n netscope -l app=netscope-server
    ```
 
+### Quick Start (Development)
+
+For development or testing with locally built images:
+
+1. **Build images:**
+   ```bash
+   # Build everything (binaries and images)
+   make all
+   make docker
+   ```
+
+2. **Deploy with custom images:**
+   ```bash
+   # Install with custom image tags
+   helm install netscope-agent deploy/charts/netscope \
+     --namespace netscope \
+     --create-namespace \
+     --set image.tag=latest
+
+   helm install netscope-server deploy/charts/netscope-server \
+     --namespace netscope \
+     --set image.tag=latest
+   ```
+
 ### Production Deployment
 
 #### Using Pre-built Images
 
-Update the image references in `deploy/netscope.yaml`:
+Deploy netscope with your custom container registry:
+
+```bash
+# Deploy agent with custom registry
+helm install netscope-agent deploy/charts/netscope \
+  --namespace netscope \
+  --create-namespace \
+  --set image.repository=your-registry/netscope-agent \
+  --set image.tag=v1.0.0
+
+# Deploy server with custom registry
+helm install netscope-server deploy/charts/netscope-server \
+  --namespace netscope \
+  --set image.repository=your-registry/netscope-server \
+  --set image.tag=v1.0.0
+```
+
+Alternatively, create a custom values file:
 
 ```yaml
-# For agent
-image: your-registry/netscope-agent:v1.0.0
+# custom-values.yaml
+image:
+  repository: your-registry/netscope-agent
+  tag: v1.0.0
+  pullPolicy: IfNotPresent
+```
 
-# For server
-image: your-registry/netscope-server:v1.0.0
+Then deploy:
+```bash
+helm install netscope-agent deploy/charts/netscope \
+  --namespace netscope \
+  --create-namespace \
+  -f custom-values.yaml
 ```
 
 #### Build and Push Custom Images
@@ -175,11 +233,122 @@ docker build -t your-registry/netscope-server:v1.0.0 -f Dockerfile.server .
 docker push your-registry/netscope-agent:v1.0.0
 docker push your-registry/netscope-server:v1.0.0
 
-# Deploy
-kubectl apply -f deploy/netscope.yaml
+# Deploy with Helm
+helm install netscope-agent deploy/charts/netscope \
+  --namespace netscope \
+  --create-namespace \
+  --set image.repository=your-registry/netscope-agent \
+  --set image.tag=v1.0.0
+
+helm install netscope-server deploy/charts/netscope-server \
+  --namespace netscope \
+  --set image.repository=your-registry/netscope-server \
+  --set image.tag=v1.0.0
 ```
 
-### Configuration Options
+### Helm Configuration Options
+
+#### Agent Chart Values
+
+Key configuration options for `deploy/charts/netscope/values.yaml`:
+
+```yaml
+# Image configuration
+image:
+  repository: netscope-agent
+  tag: "v1.0.0"
+  pullPolicy: IfNotPresent
+
+# Agent configuration
+config:
+  serverEndpoint: "netscope-server:8080"
+  collectionInterval: "10s"
+  verbosity: 2
+  debugAddr: ":6060"
+
+# Resources
+resources:
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+
+# Security context
+securityContext:
+  privileged: true
+  capabilities:
+    add:
+      - SYS_ADMIN
+      - NET_ADMIN
+```
+
+#### Server Chart Values
+
+Key configuration options for `deploy/charts/netscope-server/values.yaml`:
+
+```yaml
+# Image configuration
+image:
+  repository: netscope-server
+  tag: "v1.0.0"
+  pullPolicy: IfNotPresent
+
+# Server configuration
+config:
+  listenAddr: ":8080"
+  enableFlowLogs: false
+  verbosity: 2
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+
+# Resources
+resources:
+  limits:
+    memory: "1Gi"
+    cpu: "500m"
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+
+# Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+# Custom endpoints ConfigMap
+customEndpoints:
+  enabled: false
+  data: |
+    endpoints: []
+```
+
+#### Override Values at Install Time
+
+You can override any value during installation:
+
+```bash
+# Install agent with custom settings
+helm install netscope-agent deploy/charts/netscope \
+  --namespace netscope \
+  --set config.collectionInterval=30s \
+  --set config.verbosity=3 \
+  --set resources.limits.memory=1Gi
+
+# Install server with flow logs enabled
+helm install netscope-server deploy/charts/netscope-server \
+  --namespace netscope \
+  --set config.enableFlowLogs=true \
+  --set autoscaling.enabled=true
+```
+
+### Command-Line Configuration Options
 
 #### Agent Configuration
 - `--node-name`: Node name (auto-populated via downward API)
@@ -478,7 +647,7 @@ Tested and validated on:
 netscope/
 ├── agent/               # Agent code and eBPF programs
 │   ├── agent.go        # Agent implementation
-│   ├── netscope.c # eBPF C program
+│   ├── netscope.c      # eBPF C program
 │   └── gen.go          # bpf2go generation
 ├── server/             # Server implementation
 │   └── server.go       # Server with metrics
@@ -488,7 +657,10 @@ netscope/
 ├── pkg/                # Shared packages
 │   ├── payload/        # Wire protocol
 │   └── byteorder/      # Byte order utilities
-├── deploy/             # Kubernetes manifests
+├── deploy/             # Deployment files
+│   └── charts/         # Helm charts
+│       ├── netscope/   # Agent chart
+│       └── netscope-server/ # Server chart
 └── Makefile           # Build automation
 ```
 
@@ -583,10 +755,12 @@ For issues, questions, or feature requests:
 
 ## Roadmap
 
+### Completed
+- [x] Helm charts for installation (Agent and Server)
+- [x] Grafana dashboard for cross-zone traffic monitoring
+
 ### Near-term (Q1 2025)
 - [ ] IPv6 support
-- [ ] Grafana dashboard templates
-- [ ] Helm chart for installation
 - [ ] Webhook for real-time alerts
 
 ### Mid-term (Q2 2025)
