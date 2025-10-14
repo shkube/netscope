@@ -41,6 +41,7 @@ spec:
             - --listen-addr=:{{ .Values.service.port }}
             - --enable-flow-logs={{ .Values.config.enableFlowLogs }}
             - -v={{ .Values.config.verbosity }}
+            - --custom-endpoints-configmap={{.Values.customEndpointsConfigMapName}}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
