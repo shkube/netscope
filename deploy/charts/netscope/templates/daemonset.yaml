@@ -47,7 +47,7 @@ spec:
             - --collection-interval={{ .Values.config.collectionInterval }}
             # empty kubeconfig means use in-cluster config
             - --kubeconfig=
-            - --listen-addr={{ .Values.service.port }}
+            - --listen-addr=':{{ .Values.service.port }}'
             - --enable-flow-logs={{ .Values.config.enableFlowLogs }}
             - -v={{ .Values.config.verbosity }}
           ports:
