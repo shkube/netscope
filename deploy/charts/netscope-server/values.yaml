@@ -13,7 +13,7 @@ image:
 config:
   enableFlowLogs: false
   verbosity: 2
-  endpoints:
+  endpoints: []
     # Example endpoints.
     # - name: "custom-name"
     #   namespace: "custom-namespace"
