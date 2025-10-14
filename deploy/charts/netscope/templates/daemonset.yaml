@@ -43,12 +43,12 @@ spec:
                   fieldPath: spec.nodeName
           args:
             - --node-name=$(NODE_NAME)
+            - --debug-addr=:{{ .Values.service.port }}
+            - --enable-flow-logs={{ .Values.config.enableFlowLogs }}
             - --server-endpoint={{ .Values.config.serverEndpoint }}
             - --collection-interval={{ .Values.config.collectionInterval }}
             # empty kubeconfig means use in-cluster config
             - --kubeconfig=
-            - --listen-addr=:{{ .Values.service.port }}
-            - --enable-flow-logs={{ .Values.config.enableFlowLogs }}
             - -v={{ .Values.config.verbosity }}
           ports:
             - name: http
