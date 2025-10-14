@@ -38,7 +38,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            - --listen-addr=':{{ .Values.service.port }}'
+            - --listen-addr=:{{ .Values.service.port }}
             - --enable-flow-logs={{ .Values.config.enableFlowLogs }}
             - -v={{ .Values.config.verbosity }}
           ports:
