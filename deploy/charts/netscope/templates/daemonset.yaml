@@ -5,8 +5,6 @@ metadata:
   labels:
     {{- include "netscope.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "netscope.selectorLabels" . | nindent 6 }}
